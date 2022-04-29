@@ -5,13 +5,6 @@ import {distance, loc} from "./models/Map";
 import {heroesPerPlayer} from "./const";
 
 export class Game {
-    ACTION_WAIT = "WAIT";
-    ACTION_MOVE = "MOVE";
-    ACTION_SPELL = "SPELL";
-    SPELL_WIND = "WIND";
-    SPELL_CONTROL = "CONTROL";
-    SPELL_SHIELD = "SHIELD";
-
     me: Player;
     enemy: Player;
     entities: Entity[];

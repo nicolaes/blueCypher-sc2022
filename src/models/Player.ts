@@ -1,7 +1,7 @@
 import {Loc} from "./Map";
 
 export class Player {
-    xy: Loc;
+    loc: Loc;
 
     constructor(
         public basePosX: number,
@@ -9,7 +9,7 @@ export class Player {
         public baseHealth: number,
         public mana: number
     ) {
-        this.xy = [basePosX, basePosY];
+        this.loc = [basePosX, basePosY];
     }
 
     setHealth = (value: number) => {

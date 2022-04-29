@@ -1,5 +1,6 @@
 import {Player} from "./Player";
-import {Loc} from "./Map";
+import {distance, Loc} from "./Map";
+import {MOB_DAMAGE_RANGE, MOB_FOCUS_RANGE, MOB_SPEED, Threat} from "../const";
 
 export enum EntityType {
     Mob,
@@ -8,14 +9,13 @@ export enum EntityType {
 }
 
 export class Entity {
-    TYPE_MONSTER = 0;
-    TYPE_MY_HERO = 1;
-    TYPE_OTHER_HERO = 2;
     MY_BASE = 1;
     OTHER_BASE = 2;
 
     distanceFromMyBase: number;
     loc: Loc;
+    nextLoc: Loc;
+    threat: Threat;
 
     constructor(
         public id: number,
@@ -31,17 +31,32 @@ export class Entity {
         public threatFor: number,
         private me: Player
     ) {
-        this.distanceFromMyBase = this.getDistanceFrom(
-            this.me.basePosX,
-            this.me.basePosY
-        );
         this.loc = [x, y];
+        this.nextLoc = [x + vx, y + vy];
+        this.distanceFromMyBase = distance(this.loc, me.loc);
+        this.threat = this.computeThreatLevel();
     }
 
     isDangerousForMyBase = (): boolean => {
         return this.threatFor === this.MY_BASE;
     };
-    getDistanceFrom = (x: number, y: number): number => {
-        return Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
-    };
+
+    private computeThreatLevel(): Threat {
+        if (this.distanceFromMyBase <= MOB_DAMAGE_RANGE + MOB_SPEED + 1) {
+            return Threat.WILL_DAMAGE;
+        }
+
+        if (
+            this.distanceFromMyBase >= MOB_FOCUS_RANGE - MOB_SPEED + 1 &&
+            this.threatFor === this.MY_BASE
+        ) {
+            return Threat.WILL_FOCUS_BASE;
+        }
+
+        if (this.nearBase && this.threatFor === this.MY_BASE) {
+            return Threat.FOCUSES_BASE;
+        }
+    }
 }
+
+

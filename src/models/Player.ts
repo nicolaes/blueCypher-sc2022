@@ -1,7 +1,7 @@
-import {loc} from "./Map";
+import {Loc} from "./Map";
 
 export class Player {
-    xy: loc;
+    xy: Loc;
 
     constructor(
         public basePosX: number,

@@ -1,4 +1,11 @@
 import {Player} from "./Player";
+import {Loc} from "./Map";
+
+export enum EntityType {
+    Mob,
+    MyHero,
+    OtherHero
+}
 
 export class Entity {
     TYPE_MONSTER = 0;
@@ -6,11 +13,13 @@ export class Entity {
     TYPE_OTHER_HERO = 2;
     MY_BASE = 1;
     OTHER_BASE = 2;
+
     distanceFromMyBase: number;
+    loc: Loc;
 
     constructor(
         public id: number,
-        public type: number,
+        public type: EntityType,
         public x: number,
         public y: number,
         public shieldLife: number,
@@ -26,6 +35,7 @@ export class Entity {
             this.me.basePosX,
             this.me.basePosY
         );
+        this.loc = [x, y];
     }
 
     isDangerousForMyBase = (): boolean => {

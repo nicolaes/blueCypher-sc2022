@@ -1,4 +1,4 @@
-import {loc} from "./models/Map";
+import {Loc} from "./models/Map";
 
 export enum HeroAction {
     WAIT = 'WAIT',
@@ -12,14 +12,18 @@ export enum HeroSpell {
     SHIELD = 'SHIELD',
 }
 
+export const MELEE_RANGE = 800;
+export const MOB_BASE_RANGE = 300;
+export const MOB_SPEED = 400;
+
 export type heroCommand = string | null;
 
-export function heroMove(hero: number, to: loc) {
+export function heroMove(hero: number, to: Loc) {
     let [x, y] = to;
     return `${HeroAction.MOVE} ${x} ${y}`;
 }
 
-export function heroWait(hero: number, initialHeroLocs: loc[]) {
+export function heroWait(hero: number, initialHeroLocs: Loc[]) {
     const [x, y] = initialHeroLocs[hero];
     return `${HeroAction.MOVE} ${x} ${y}`;
 }

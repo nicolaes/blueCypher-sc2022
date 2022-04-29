@@ -40,9 +40,16 @@ while (true) {
         );
     }
 
+    game.initialize();
+
+    // const start = performance.now();
     game.computeActions();
+    // const end = performance.now();
+    // const ms = Math.round(end - start);
+
 
     for (let i = 0; i < heroesPerPlayer; i++) {
-        console.log(game.nextAction(i));
+        console.log(`${game.nextAction(i)}`);
+        // console.log(`${game.nextAction(i)} - ${ms}ms`);
     }
 }

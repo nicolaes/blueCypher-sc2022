@@ -42,12 +42,12 @@ export class Entity {
     };
 
     private computeThreatLevel(): Threat {
-        if (this.distanceFromMyBase <= MOB_DAMAGE_RANGE + MOB_SPEED + 1) {
+        if (distance(this.nextLoc, this.me.loc) <= MOB_DAMAGE_RANGE  + 1) {
             return Threat.WILL_DAMAGE;
         }
 
         if (
-            this.distanceFromMyBase >= MOB_FOCUS_RANGE - MOB_SPEED + 1 &&
+            this.distanceFromMyBase >= MOB_FOCUS_RANGE + 1 &&
             this.threatFor === this.MY_BASE
         ) {
             return Threat.WILL_FOCUS_BASE;

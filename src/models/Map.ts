@@ -18,3 +18,11 @@ export function closestFirstSorting(closestTo: Loc) {
         return distance(a.loc, closestTo) - distance(b.loc, closestTo);
     };
 }
+
+export function closestToLocReducer(closestTo: Loc) {
+    return (closestEntity: Entity | null, entity: Entity) => {
+        if (!closestEntity) return entity;
+        return distance(closestEntity.loc, closestTo) < distance(entity.loc, closestTo)
+            ? closestEntity : entity;
+    }
+}

@@ -1,8 +1,8 @@
 import {Player} from "./models/Player";
 import {Entity, EntityType} from "./models/Entity";
 import {heroControl, heroDefend, heroMove, heroShield, heroWait, heroWind} from "./helpers";
-import {closestFirstSorting, distance, getPositionFromBase, Loc} from "./models/Map";
-import {HERO_SPEED, heroCommand, heroesPerPlayer, MELEE_RANGE, SIGHT_RANGE, Threat} from "./const";
+import {closestFirstSorting, closestToLocReducer, distance, getPositionFromBase, Loc} from "./models/Map";
+import {HERO_SPEED, heroCommand, heroesPerPlayer, MELEE_RANGE, MOB_FOCUS_RANGE, SIGHT_RANGE, Threat} from "./const";
 import {sortHeroes, sortMobs} from "./procedures/init.procedures";
 
 export class Game {
@@ -89,29 +89,27 @@ export class Game {
         }
         //=== ^^^ ATTACK ENEMY BASE
 
-        // Attack mobs
+        const mobsForDefenders = this.mobs
+            .filter(mob => distance(mob.loc, this.me.loc) < MOB_FOCUS_RANGE + 4000);
         for (let i = 0; i < heroesPerPlayer; i++) {
-            if (this.mobs.length) {
-                const closestMob: Entity = this.mobs.shift();
-
-                const closestHeroes = this.availableHeroes
-                    .sort((h1, h2) =>
-                        distance(h1.loc, closestMob.loc) - distance(h2.loc, closestMob.loc));
-                const closestHero = closestHeroes[0];
+            const closestMob: Entity = mobsForDefenders.shift();
+            if (closestMob) {
+                const closestHero = this.availableHeroes.reduce(closestToLocReducer(closestMob.loc), null);
 
                 if (closestHero) {
-                    const heroAction = this.decideClosestHeroAction(closestHero, closestMob);
+                    const heroAction = this.decideClosestHeroAction(closestHero, closestMob, mobsForDefenders);
                     this.setHeroCommand(closestHero.id, heroAction);
                 }
             }
         }
+        //=== ^^^ DEFEND ^^^ ==================================================
     }
 
     otherHeroInRange(hero: Entity) {
         return this.otherHeroes.some(other => distance(other.loc, hero.loc) < SIGHT_RANGE + 1);
     }
 
-    decideClosestHeroAction(hero: Entity, closestMob: Entity): heroCommand {
+    decideClosestHeroAction(hero: Entity, closestMob: Entity, mobsForDefenders: Entity[]): heroCommand {
         if (hero.isControlled) {
             if (!this.enemyControlledMyHero) {
                 this.enemyControlledMyHero = true;
@@ -146,9 +144,9 @@ export class Game {
         //=== ^^^ CONTROL MOB ^^^ ===================================
 
         // Consider attacks on close mobs too
-        for (let i = 0; i < this.mobs.length; i++) {
-            if (distance(this.mobs[i].loc, closestMob.loc) <= MELEE_RANGE) {
-                this.mobs.splice(i, 1);
+        for (let i = 0; i < mobsForDefenders.length; i++) {
+            if (distance(mobsForDefenders[i].loc, closestMob.loc) <= MELEE_RANGE) {
+                mobsForDefenders.splice(i, 1);
             }
         }
 

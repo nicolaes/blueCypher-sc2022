@@ -1,6 +1,6 @@
 import {Player} from "./Player";
 import {distance, Loc} from "./Map";
-import {MOB_DAMAGE_RANGE, MOB_FOCUS_RANGE, MOB_SPEED, Threat} from "../const";
+import {MOB_DAMAGE_RANGE, MOB_FOCUS_RANGE, Threat} from "../const";
 
 export enum EntityType {
     Mob,
@@ -41,8 +41,12 @@ export class Entity {
         return this.threatFor === this.MY_BASE;
     };
 
+    isDangerousForOtherBase = (): boolean => {
+        return this.threatFor === this.OTHER_BASE;
+    };
+
     private computeThreatLevel(): Threat {
-        if (distance(this.nextLoc, this.me.loc) <= MOB_DAMAGE_RANGE  + 1) {
+        if (distance(this.nextLoc, this.me.loc) <= MOB_DAMAGE_RANGE + 1) {
             return Threat.WILL_DAMAGE;
         }
 

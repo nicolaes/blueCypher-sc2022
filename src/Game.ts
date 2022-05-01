@@ -1,8 +1,8 @@
 import {Player} from "./models/Player";
 import {Entity, EntityType} from "./models/Entity";
-import {heroControl, heroMove, heroDefend, heroWind, heroWait, heroShield} from "./helpers";
-import {distance, Loc} from "./models/Map";
-import {heroCommand, heroesPerPlayer, MELEE_RANGE, SIGHT_RANGE, Threat} from "./const";
+import {heroControl, heroDefend, heroMove, heroShield, heroWait, heroWind} from "./helpers";
+import {closestFirstSorting, distance, getPositionFromBase, Loc} from "./models/Map";
+import {HERO_SPEED, heroCommand, heroesPerPlayer, MELEE_RANGE, SIGHT_RANGE, Threat} from "./const";
 import {sortHeroes, sortMobs} from "./procedures/init.procedures";
 
 export class Game {
@@ -17,6 +17,7 @@ export class Game {
     initialHeroLocs: Loc[];
 
     enemyControlledMyHero = false;
+    myAttackerPatrol: Loc | null = null;
 
     constructor(baseX: number, baseY: number, private heroes: number) {
         this.me = new Player(baseX, baseY, 3, 0);
@@ -27,7 +28,7 @@ export class Game {
             0
         );
 
-        this.initialHeroLocs = [[5700, 4700], [5500, 2500], [2500, 5500]];
+        this.initialHeroLocs = [[5700, 4700], [7000, 2700], [3000, 5500]];
         if (baseX !== 0) {
             this.initialHeroLocs = this.initialHeroLocs.map(([x, y]) => [baseX - x, baseY - y]);
         }
@@ -79,7 +80,16 @@ export class Game {
     }
 
     computeActions = () => {
-        // Attack first mobs
+        if (this.shouldStopAttacking()) {
+            this.myAttackerPatrol = null;
+        } else if (this.myAttackerPatrol !== null || this.shouldStartAttacking()) {
+            const myAttacker = this.myHeroes[0];
+            const attackCommand = this.goToEnemyAndCastControl(myAttacker);
+            this.setHeroCommand(0, attackCommand);
+        }
+        //=== ^^^ ATTACK ENEMY BASE
+
+        // Attack mobs
         for (let i = 0; i < heroesPerPlayer; i++) {
             if (this.mobs.length) {
                 const closestMob: Entity = this.mobs.shift();
@@ -89,7 +99,10 @@ export class Game {
                         distance(h1.loc, closestMob.loc) - distance(h2.loc, closestMob.loc));
                 const closestHero = closestHeroes[0];
 
-                this.heroCommands[closestHero.id] = this.decideClosestHeroAction(closestHero, closestMob);
+                if (closestHero) {
+                    const heroAction = this.decideClosestHeroAction(closestHero, closestMob);
+                    this.setHeroCommand(closestHero.id, heroAction);
+                }
             }
         }
     }
@@ -106,7 +119,6 @@ export class Game {
             return heroWait();
         }
         // === ^^^ WAIT IF UNDER CONTROL ^^^ ==============================
-
 
         if (closestMob.threat === Threat.WILL_DAMAGE && closestMob.shieldLife === 0) {
             return heroWind();
@@ -125,7 +137,7 @@ export class Game {
         //=== ^^^ DEFENSIVE HERO SHIELD ^^^ =================
 
         if (
-            this.me.mana > 100 &&
+            this.me.mana > 150 &&
             closestMob.threat === Threat.WILL_FOCUS_BASE &&
             distance(hero.loc, closestMob.loc) < SIGHT_RANGE
         ) {
@@ -133,7 +145,7 @@ export class Game {
         }
         //=== ^^^ CONTROL MOB ^^^ ===================================
 
-        // Consider attacks close mobs too
+        // Consider attacks on close mobs too
         for (let i = 0; i < this.mobs.length; i++) {
             if (distance(this.mobs[i].loc, closestMob.loc) <= MELEE_RANGE) {
                 this.mobs.splice(i, 1);
@@ -141,6 +153,64 @@ export class Game {
         }
 
         return heroMove(hero.id, closestMob.loc);
+    }
+
+    private goToEnemyAndCastControl(myAttacker: Entity) {
+        const patrolAround: Loc = getPositionFromBase([4300, 3300], this.enemy.loc);
+        const maxDistanceToEnemyBase: number = distance(patrolAround, this.enemy.loc) + 1000;
+
+        // My attacker patrols to:
+        if (
+            !this.myAttackerPatrol ||
+            distance(myAttacker.loc, this.myAttackerPatrol) < HERO_SPEED
+        ) {
+            const direction = Math.random() * Math.PI / 3 + Math.PI / 12; // 15deg > 75deg
+            const distanceFromEnemy = maxDistanceToEnemyBase - 3000 + Math.random() * 3000
+            const patrolCoordinates: Loc = [
+                Math.cos(direction) * distanceFromEnemy,
+                Math.sin(direction) * distanceFromEnemy
+            ];
+            this.myAttackerPatrol = getPositionFromBase(patrolCoordinates, this.enemy.loc);
+
+            console.error('Patrol direction: ',
+                this.myAttackerPatrol, ' - at ',
+                distance(this.myAttackerPatrol, this.enemy.loc))
+        }
+
+        if (distance(this.myHeroes[0].loc, this.enemy.loc) > maxDistanceToEnemyBase) {
+            return heroMove(myAttacker.id, patrolAround);
+        }
+
+        const mobsInRange = this.mobs
+            .filter(mob => distance(myAttacker.loc, mob.loc) < SIGHT_RANGE)
+            .sort(closestFirstSorting(myAttacker.loc));
+
+        const closestMobWithHalfHealth = mobsInRange
+            .find(mob =>
+                mob.shieldLife === 0 &&
+                mob.health >= 10 &&
+                !mob.isDangerousForOtherBase()
+            );
+        if (closestMobWithHalfHealth) {
+            return heroControl(closestMobWithHalfHealth.id, this.enemy.loc);
+        }
+
+        return heroMove(myAttacker.id, this.myAttackerPatrol);
+    }
+
+    shouldStartAttacking(): boolean {
+        return this.mobs.filter(mob => mob.threat <= Threat.FOCUSES_BASE).length <= 4 &&
+            this.me.mana > 150;
+    }
+
+    shouldStopAttacking(): boolean {
+        return this.mobs.filter(mob => mob.threat <= Threat.FOCUSES_BASE).length > 6 &&
+            this.me.mana < 100;
+    }
+
+    setHeroCommand(heroIdOrIndex: number, command: heroCommand) {
+        const heroIndex = heroIdOrIndex >= 3 ? heroIdOrIndex - 3 : heroIdOrIndex;
+        this.heroCommands[heroIndex] = command;
     }
 
     nextAction = (hero: number): string => {

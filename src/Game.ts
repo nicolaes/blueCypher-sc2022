@@ -1,8 +1,15 @@
 import {Player} from "./models/Player";
 import {Entity, EntityType} from "./models/Entity";
 import {heroControl, heroDefend, heroMove, heroShield, heroWait, heroWind} from "./helpers";
-import {closestFirstSorting, closestToLocReducer, distance, getPositionFromBase, Loc} from "./models/Map";
-import {HERO_SPEED, heroCommand, heroesPerPlayer, MELEE_RANGE, MOB_FOCUS_RANGE, SIGHT_RANGE, Threat} from "./const";
+import {
+    closestFirstSorting,
+    closestToLocReducer,
+    distance,
+    getPositionFromBase,
+    Loc,
+    turnsUntilMobKilledOrWindedByHero
+} from "./models/Map";
+import {HERO_SPEED, heroCommand, heroesPerPlayer, HERO_MELEE_RANGE, MOB_FOCUS_RANGE, SIGHT_RANGE, Threat} from "./const";
 import {sortHeroes, sortMobs} from "./procedures/init.procedures";
 
 export class Game {
@@ -91,7 +98,7 @@ export class Game {
 
         const mobsForDefenders = this.mobs
             .filter(mob => distance(mob.loc, this.me.loc) < MOB_FOCUS_RANGE + 4000);
-        for (let i = 0; i < heroesPerPlayer; i++) {
+        while (this.availableHeroes.length && mobsForDefenders.length) {
             const closestMob: Entity = mobsForDefenders.shift();
             if (closestMob) {
                 const closestHero = this.availableHeroes.reduce(closestToLocReducer(closestMob.loc), null);
@@ -118,6 +125,16 @@ export class Game {
         }
         // === ^^^ WAIT IF UNDER CONTROL ^^^ ==============================
 
+        let lostCauseIndex = -1;
+        while (lostCauseIndex < 0) {
+            lostCauseIndex = turnsUntilMobKilledOrWindedByHero(hero, closestMob, this.me);
+            if (lostCauseIndex >= 0) break;
+
+            closestMob = mobsForDefenders.shift();
+            if (!closestMob) return null;
+        }
+        //=== ^^^ SKIP LOST CAUSE MOBS ^^^ ==============
+
         if (closestMob.threat === Threat.WILL_DAMAGE && closestMob.shieldLife === 0) {
             return heroWind();
         }
@@ -137,7 +154,8 @@ export class Game {
         if (
             this.me.mana > 150 &&
             closestMob.threat === Threat.WILL_FOCUS_BASE &&
-            distance(hero.loc, closestMob.loc) < SIGHT_RANGE
+            distance(hero.loc, closestMob.loc) < SIGHT_RANGE &&
+            this.availableHeroes.length < mobsForDefenders.length
         ) {
             return heroControl(closestMob.id, this.enemy.loc);
         }
@@ -145,7 +163,7 @@ export class Game {
 
         // Consider attacks on close mobs too
         for (let i = 0; i < mobsForDefenders.length; i++) {
-            if (distance(mobsForDefenders[i].loc, closestMob.loc) <= MELEE_RANGE) {
+            if (distance(mobsForDefenders[i].loc, closestMob.loc) <= HERO_MELEE_RANGE) {
                 mobsForDefenders.splice(i, 1);
             }
         }

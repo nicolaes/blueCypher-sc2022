@@ -12,6 +12,11 @@ export function sortMobs(mobs: Entity[]) {
             return a.isDangerousForMyBase() ? -1 : 1;
         }
 
+        // Depriorities ones targeting enemies
+        if (a.isDangerousForOtherBase() !== b.isDangerousForOtherBase()) {
+            return a.isDangerousForOtherBase() ? 1 : -1;
+        }
+
         return a.distanceFromMyBase - b.distanceFromMyBase
     })
 }

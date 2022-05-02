@@ -21,10 +21,12 @@ export enum HeroSpell {
 
 export const SIGHT_RANGE = 2200;
 export const WIND_RANGE = 1200;
-export const MELEE_RANGE = 800;
 export const MOB_DAMAGE_RANGE = 300;
 export const MOB_FOCUS_RANGE = 5000;
 export const MOB_SPEED = 400;
+
 export const HERO_SPEED = 800;
+export const HERO_MELEE_RANGE = 800;
+export const HERO_DAMAGE = 2;
 
 export type heroCommand = string | null;
